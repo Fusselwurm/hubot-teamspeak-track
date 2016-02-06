@@ -48,7 +48,7 @@ module.exports = (robot) ->
 
     send_message = (message) ->
       for room in rooms
-        robot.send {room: room}, message
+        robot.messageRoom room, message
 
     client.send "login", {client_login_name: user, client_login_password: password}, (err, resp) ->
       if voice_port
@@ -56,11 +56,13 @@ module.exports = (robot) ->
       client.send "servernotifyregister", {event: "server"}
 
       client.on "cliententerview", (event) ->
+        if (event.client_nickname.indexOf('Unknown ') == 0) then return
         active_users[event.clid] = event.client_nickname
         send_message active_users[event.clid] + " has entered TeamSpeak"
 
       client.on "clientleftview", (event) ->
-        send_message active_users[event.clid] + " has left TeamSpeak. Reason: " + event.reasonmsg
+        if (!active_users[event.clid]) then return
+        send_message active_users[event.clid] + " has left TeamSpeak." + (event.invokerid && (" Reason: " + event.reasonmsg) || "") 
         active_users[event.clid] = ""
 
       # Here to keep the TeamSpeak connection alive
