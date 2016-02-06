@@ -28,6 +28,11 @@ enabled = true
 TeamSpeak = require 'node-teamspeak'
 util = require 'util'
 
+
+dehighlight = (nick) ->
+  (nick || '').split('').join('\u200b')
+
+
 module.exports = (robot) ->
   unless host
     robot.logger.warning "Missing TeamSpeak IP!"
@@ -58,11 +63,11 @@ module.exports = (robot) ->
       client.on "cliententerview", (event) ->
         if (event.client_nickname.indexOf('Unknown ') == 0) then return
         active_users[event.clid] = event.client_nickname
-        send_message active_users[event.clid] + " has entered TeamSpeak"
+        send_message dehighlight(active_users[event.clid]) + " has entered TeamSpeak"
 
       client.on "clientleftview", (event) ->
         if (!active_users[event.clid]) then return
-        send_message active_users[event.clid] + " has left TeamSpeak." + (event.invokerid && (" Reason: " + event.reasonmsg) || "") 
+        send_message dehighlight(active_users[event.clid]) + " has left TeamSpeak." + (event.invokerid && (" Reason: " + event.reasonmsg) || "") 
         active_users[event.clid] = ""
 
       # Here to keep the TeamSpeak connection alive
@@ -77,6 +82,6 @@ module.exports = (robot) ->
 
           for el in resp
             if el.client_type isnt 1
-              users.push el.client_nickname
+              users.push dehighlight(el.client_nickname)
 
           msg.send "Currently in TeamSpeak: " + users.join(", ")
