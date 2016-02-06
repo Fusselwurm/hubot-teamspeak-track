@@ -30,7 +30,7 @@ util = require 'util'
 
 
 dehighlight = (nick) ->
-  (nick || '').split('').join('\u200b')
+  (nick || '').split('').join('\ufeff')
 
 
 module.exports = (robot) ->
