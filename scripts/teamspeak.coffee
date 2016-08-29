@@ -54,6 +54,7 @@ module.exports = (robot) ->
     client = new TeamSpeak host
     active_users = {}
     ignored_users = {}
+    channels = {}
     rooms = process.env.HUBOT_TEAMSPEAK_OUT_ROOM.split(",")
 
     send_message = (message) ->
@@ -64,20 +65,26 @@ module.exports = (robot) ->
       if voice_port
         client.send "use", {port: voice_port}
       client.send "servernotifyregister", {event: "server"}
+      client.send "servernotifyregister", {event: "channel", id: 0}
 
       client.on "cliententerview", (event) ->
         if (event.client_nickname.match(/Unknown\s+from\s+/))
           ignored_users[event.clid] = true
           return
-        active_users[event.clid] = event.client_nickname
-        send_message dehighlight(active_users[event.clid]) + " has entered TeamSpeak"
+        active_users[event.clid] = {name: event.client_nickname}
+        send_message dehighlight(active_users[event.clid].name) + " has entered TeamSpeak"
 
       client.on "clientleftview", (event) ->
         if (ignored_users[event.clid])
           delete ignored_users[event.clid];
           return
-        send_message dehighlight(active_users[event.clid]) + " has left TeamSpeak." + (event.invokerid && (" Reason: " + event.reasonmsg) || "")
-        active_users[event.clid] = ""
+        send_message dehighlight(active_users[event.clid]?.name) + " has left TeamSpeak." + (event.invokerid && (" Reason: " + event.reasonmsg) || "")
+        active_users[event.clid] = null
+
+      client.on "clientmoved", (event) ->
+        if (ignored_users[event.clid])
+          return
+
 
       # Here to keep the TeamSpeak connection alive
       setInterval ->
@@ -86,12 +93,34 @@ module.exports = (robot) ->
       true
 
       robot.respond /teamspeak/i, (msg) ->
-        client.send "clientlist", (err, resp) ->
-          users = []
+        client.send "channellist", (err, resp) ->
+          channels = {}
+          for c in resp
+            c.users = []
+            channels[c.cid] = c
 
-          for el in resp
-            if el.client_type isnt 1
-              users.push dehighlight(el.client_nickname)
+          channels[0] =
+            cid: 0,
+            pid: 0,
+            channel_order: 0,
+            channel_name: 'Unbekannter Channel',
+            total_clients: 0,
+            channel_needed_subscribe_power: 0,
+            users: []
 
-          tolleMessage = ("Currently in TeamSpeak: " + users.sort(sortCaseInsensitive).map(wrapInBackticks).join(", ")) || 'nur der Wind…'
-          msg.send tolleMessage
+          client.send "clientlist", (err, resp) ->
+
+            for el in resp
+              if el.client_type isnt 1
+                channels[el.cid || 0].users.push el.client_nickname
+
+            msg = []
+            for cid of channels
+              c = channels[cid]
+              if c.users.length > 0
+                msg.push "*" + c.channel_name + "* (" + c.total_clients + "): " + c.users.sort(sortCaseInsensitive).map(dehighlight).map(wrapInBackticks).join(", ")
+
+            if msg.length > 0
+              send_message "Im Teamspeak sind " + resp.length + " Benutzer :\n" + msg.join("\n")
+            else
+              send_message "Durch den leeren Teamspeakserver weht ein kalter Wind."
