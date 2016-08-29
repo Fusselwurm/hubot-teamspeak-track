@@ -88,5 +88,5 @@ module.exports = (robot) ->
             if el.client_type isnt 1
               users.push dehighlight(el.client_nickname)
 
-          tolleMessage = ("Currently in TeamSpeak: " + users.sort().map((u) -> '`' + u + '`').join(", ")) || 'nur der Wind…'
+          tolleMessage = ("Currently in TeamSpeak: " + users.sort((u) -> u.toLowerCase()).map((u) -> '`' + u + '`').join(", ")) || 'nur der Wind…'
           msg.send tolleMessage
