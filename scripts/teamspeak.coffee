@@ -64,8 +64,13 @@ module.exports = (robot) ->
     client.send "login", {client_login_name: user, client_login_password: password}, (err, resp) ->
       if voice_port
         client.send "use", {port: voice_port}
-      client.send "servernotifyregister", {event: "server"}
       client.send "servernotifyregister", {event: "channel", id: 0}
+
+      client.send "clientlist", (err, resp) ->
+        for el in resp
+          if el.client_type isnt 1
+            active_users[el.clid] = {name: el.client_nickname}
+
 
       client.on "cliententerview", (event) ->
         if (event.client_nickname.match(/Unknown\s+from\s+/))
@@ -118,7 +123,7 @@ module.exports = (robot) ->
             for cid of channels
               c = channels[cid]
               if c.users.length > 0
-                msg.push "*" + c.channel_name + "* (" + c.total_clients + "): " + c.users.sort(sortCaseInsensitive).map(dehighlight).map(wrapInBackticks).join(", ")
+                msg.push "*" + c.channel_name + "* (" + c.total_clients + "): " + c.users.sort(sortCaseInsensitive).map(dehighlight).join(", ")
 
             if msg.length > 0
               send_message "Im Teamspeak sind " + resp.length + " Benutzer :\n" + msg.join("\n")
