@@ -32,7 +32,6 @@ util = require 'util'
 dehighlight = (nick) ->
   (nick || '').split('').join('\ufeff')
 
-
 module.exports = (robot) ->
   unless host
     robot.logger.warning "Missing TeamSpeak IP!"
@@ -48,7 +47,8 @@ module.exports = (robot) ->
 
   if enabled
     client = new TeamSpeak host
-    active_users = []
+    active_users = {}
+    ignored_users = {}
     rooms = process.env.HUBOT_TEAMSPEAK_OUT_ROOM.split(",")
 
     send_message = (message) ->
@@ -61,13 +61,17 @@ module.exports = (robot) ->
       client.send "servernotifyregister", {event: "server"}
 
       client.on "cliententerview", (event) ->
-        if (event.client_nickname.indexOf('Unknown ') == 0) then return
+        if (event.client_nickname.match(/Unknown\s+from\s+/))
+          ignored_users[event.clid] = true
+          return
         active_users[event.clid] = event.client_nickname
         send_message dehighlight(active_users[event.clid]) + " has entered TeamSpeak"
 
       client.on "clientleftview", (event) ->
-        if (!active_users[event.clid]) then return
-        send_message dehighlight(active_users[event.clid]) + " has left TeamSpeak." + (event.invokerid && (" Reason: " + event.reasonmsg) || "") 
+        if (ignored_users[event.clid])
+          delete ignored_users[event.clid];
+          return
+        send_message dehighlight(active_users[event.clid]) + " has left TeamSpeak." + (event.invokerid && (" Reason: " + event.reasonmsg) || "")
         active_users[event.clid] = ""
 
       # Here to keep the TeamSpeak connection alive
@@ -84,4 +88,5 @@ module.exports = (robot) ->
             if el.client_type isnt 1
               users.push dehighlight(el.client_nickname)
 
-          msg.send "Currently in TeamSpeak: " + users.join(", ")
+          tolleMessage = ("Currently in TeamSpeak: " + users.sort().map((u) -> '`' + u + '`').join(", ")) || 'nur der Wind…'
+          msg.send tolleMessage
