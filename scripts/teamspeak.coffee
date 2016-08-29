@@ -29,11 +29,26 @@ TeamSpeak = require 'node-teamspeak'
 util = require 'util'
 
 
+
+active_users = {}
+ignored_users = {}
+groups = {}
+
 dehighlight = (nick) ->
+  if (nick.indexOf('_') == 0)
+    return nick
   (nick || '').split('').join('\ufeff')
 
 sortCaseInsensitive = (a, b) ->
-  a.toLowerCase().charCodeAt(0) - b.toLowerCase().charCodeAt(0)
+  a.toLocaleLowerCase().localeCompare(b.toLocaleLowerCase())
+
+getDecoratedNick = (user) ->
+  isAdler = ('' + user.client_servergroups).split(',').filter((sgid) -> groups[sgid]?.name == 'A').length > 0
+  nick = user.client_nickname
+  if nick and not isAdler
+    nick = '_' + nick + '_'
+
+  nick
 
 wrapInBackticks = (u) -> '`' + u + '`'
 
@@ -52,9 +67,6 @@ module.exports = (robot) ->
 
   if enabled
     client = new TeamSpeak host
-    active_users = {}
-    ignored_users = {}
-    channels = {}
     rooms = process.env.HUBOT_TEAMSPEAK_OUT_ROOM.split(",")
 
     send_message = (message) ->
@@ -66,7 +78,11 @@ module.exports = (robot) ->
         client.send "use", {port: voice_port}
       client.send "servernotifyregister", {event: "channel", id: 0}
 
-      client.send "clientlist", (err, resp) ->
+      client.send "servergrouplist", (err, resp) ->
+        for g in resp
+          groups[g.sgid] = g
+
+      client.send "clientlist", ["groups"], (err, resp) ->
         for el in resp
           if el.client_type isnt 1
             active_users[el.clid] = {name: el.client_nickname}
@@ -113,11 +129,11 @@ module.exports = (robot) ->
             channel_needed_subscribe_power: 0,
             users: []
 
-          client.send "clientlist", (err, resp) ->
+          client.send "clientlist", ["groups"], (err, resp) ->
 
             for el in resp
               if el.client_type isnt 1
-                channels[el.cid || 0].users.push el.client_nickname
+                channels[el.cid || 0].users.push getDecoratedNick(el)
 
             msg = []
             for cid of channels
