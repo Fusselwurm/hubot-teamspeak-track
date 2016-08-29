@@ -32,6 +32,11 @@ util = require 'util'
 dehighlight = (nick) ->
   (nick || '').split('').join('\ufeff')
 
+sortCaseInsensitive = (a, b) ->
+  a.toLowerCase().charCodeAt(0) - b.toLowerCase().charCodeAt(0)
+
+wrapInBackticks = (u) -> '`' + u + '`'
+
 module.exports = (robot) ->
   unless host
     robot.logger.warning "Missing TeamSpeak IP!"
@@ -88,5 +93,5 @@ module.exports = (robot) ->
             if el.client_type isnt 1
               users.push dehighlight(el.client_nickname)
 
-          tolleMessage = ("Currently in TeamSpeak: " + users.sort((u) -> u.toLowerCase()).map((u) -> '`' + u + '`').join(", ")) || 'nur der Wind…'
+          tolleMessage = ("Currently in TeamSpeak: " + users.sort(sortCaseInsensitive).map(wrapInBackticks).join(", ")) || 'nur der Wind…'
           msg.send tolleMessage
