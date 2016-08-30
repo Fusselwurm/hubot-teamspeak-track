@@ -142,6 +142,6 @@ module.exports = (robot) ->
                 msg.push "*" + c.channel_name + "* (" + c.total_clients + "): " + c.users.sort(sortCaseInsensitive).map(dehighlight).join(", ")
 
             if msg.length > 0
-              send_message "Im Teamspeak sind " + connectedClients.length + " Benutzer :\n" + msg.join("\n")
+              send_message "Im Teamspeak sind " + (connectedClients.length - 1) + " Benutzer :\n" + msg.join("\n")
             else
               send_message "Durch den leeren Teamspeakserver weht ein kalter Wind."
