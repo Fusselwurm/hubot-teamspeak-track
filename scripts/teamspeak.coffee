@@ -113,14 +113,14 @@ module.exports = (robot) ->
       , 180000
       true
 
-      robot.respond /teamspeak/i, (msg) ->
-        client.send "channellist", (err, resp) ->
-          channels = {}
-          for c in resp
+      robot.respond /teamspeak|get_users/i, (msg) ->
+        client.send "channellist", (err, channelArray) ->
+          channelMap = {}
+          for c in channelArray
             c.users = []
-            channels[c.cid] = c
+            channelMap[c.cid] = c
 
-          channels[0] =
+          channelMap[0] =
             cid: 0,
             pid: 0,
             channel_order: 0,
@@ -129,19 +129,19 @@ module.exports = (robot) ->
             channel_needed_subscribe_power: 0,
             users: []
 
-          client.send "clientlist", ["groups"], (err, resp) ->
+          client.send "clientlist", ["groups"], (err, connectedClients) ->
 
-            for el in resp
+            for el in connectedClients
               if el.client_type isnt 1
-                channels[el.cid || 0].users.push getDecoratedNick(el)
+                channelMap[el.cid || 0].users.push getDecoratedNick(el)
 
             msg = []
-            for cid of channels
-              c = channels[cid]
+            for cid of channelMap
+              c = channelMap[cid]
               if c.users.length > 0
                 msg.push "*" + c.channel_name + "* (" + c.total_clients + "): " + c.users.sort(sortCaseInsensitive).map(dehighlight).join(", ")
 
             if msg.length > 0
-              send_message "Im Teamspeak sind " + resp.length + " Benutzer :\n" + msg.join("\n")
+              send_message "Im Teamspeak sind " + connectedClients.length + " Benutzer :\n" + msg.join("\n")
             else
               send_message "Durch den leeren Teamspeakserver weht ein kalter Wind."
