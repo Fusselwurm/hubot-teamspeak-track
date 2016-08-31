@@ -25,6 +25,8 @@ password = process.env.HUBOT_TEAMSPEAK_PASSWORD
 voice_port = process.env.HUBOT_TEAMSPEAK_VOICE_PORT
 enabled = true
 
+SERVER_GROUP_NONE = 14
+
 TeamSpeak = require 'node-teamspeak'
 util = require 'util'
 
@@ -54,15 +56,16 @@ dehighlight = (nick) ->
 sortCaseInsensitive = (a, b) ->
   a.toLocaleLowerCase().localeCompare(b.toLocaleLowerCase())
 
-getDecoratedNick = (user) ->
-  isAdler = ('' + user.client_servergroups).split(',').filter((sgid) -> groups[sgid]?.name == 'A').length > 0
-  nick = user.client_nickname
+getServerGroups = (userEvent) ->
+  ('' + userEvent.client_servergroups).split(',').map((sgid) -> parseInt(sgid))
+
+getDecoratedNick = (userEvent) ->
+  isAdler = getServerGroups(userEvent).filter((sgid) -> groups[sgid]?.name == 'A').length > 0
+  nick = userEvent.client_nickname
   if nick and not isAdler
     nick = '_' + nick + '_'
 
   nick
-
-wrapInBackticks = (u) -> '`' + u + '`'
 
 module.exports = (robot) ->
   unless host
@@ -85,6 +88,14 @@ module.exports = (robot) ->
       for room in rooms
         robot.messageRoom room, message
 
+    announceUserConnect = (userEvent) ->
+      nickName = getDecoratedNick(userEvent)
+      if (getServerGroups(userEvent).indexOf(SERVER_GROUP_NONE) != -1)
+        send_message "@here new user " + nickName + " has entered TeamSpeak"
+      else
+        send_message dehighlight(nickName) + " has entered TeamSpeak"
+
+
     client.send "login", {client_login_name: user, client_login_password: password}, (err, resp) ->
       if voice_port
         client.send "use", {port: voice_port}
@@ -101,11 +112,11 @@ module.exports = (robot) ->
 
 
       client.on "cliententerview", (event) ->
-        if (event.client_nickname.match(/Unknown\s+from\s+/))
+        if (event.client_unique_identifier == 'ServerQuery')
           ignored_users[event.clid] = true
           return
         active_users[event.clid] = {name: event.client_nickname}
-        send_message dehighlight(active_users[event.clid].name) + " has entered TeamSpeak"
+        announceUserConnect(event)
 
       client.on "clientleftview", (event) ->
         if (ignored_users[event.clid])
