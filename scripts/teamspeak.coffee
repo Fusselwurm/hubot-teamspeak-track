@@ -26,6 +26,7 @@ voice_port = process.env.HUBOT_TEAMSPEAK_VOICE_PORT
 enabled = true
 
 SERVER_GROUP_NONE = 14
+SERVER_GROUP_AMBASSADOR = 20 #?
 
 TeamSpeak = require 'node-teamspeak'
 util = require 'util'
@@ -92,6 +93,8 @@ module.exports = (robot) ->
       nickName = getDecoratedNick(userEvent)
       if (getServerGroups(userEvent).indexOf(SERVER_GROUP_NONE) != -1)
         send_message "@here new user " + nickName + " has entered TeamSpeak"
+      else if (getServerGroups(userEvent).indexOf(SERVER_GROUP_AMBASSADOR) != -1)
+        send_message "@here :crown: " + nickName + " has entered TeamSpeak"
       else
         send_message dehighlight(nickName) + " has entered TeamSpeak"
 
