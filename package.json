@@ -4,7 +4,8 @@
   "description": "Allows Hubot to track who enters/exits a TeamSpeak server, as well as report on who is currently connected",
   "main": "index.coffee",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "touch messages/server-empty.txt"
   },
   "repository": {
     "type": "git",

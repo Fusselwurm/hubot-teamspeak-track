@@ -28,7 +28,19 @@ enabled = true
 TeamSpeak = require 'node-teamspeak'
 util = require 'util'
 
+messages =
+  empty: ['The TeamSpeak server is empty']
 
+getRandomMessage = (type) ->
+  availableCount = messages[type].length
+  if (availableCount == 0)
+    return ''
+  messages[type][Math.floor(Math.random() * availableCount)]
+
+fs = require 'fs'
+fs.readFile '../messages/server-empty.txt', (err, data) ->
+  if (data)
+    messages.empty = data.split('\n').filter((e) -> e.trim())
 
 active_users = {}
 ignored_users = {}
@@ -144,4 +156,4 @@ module.exports = (robot) ->
             if msg.length > 0
               send_message "Im Teamspeak sind " + (connectedClients.length - 1) + " Benutzer :\n" + msg.join("\n")
             else
-              send_message "Durch den leeren Teamspeakserver weht ein kalter Wind."
+              send_message (getRandomMessage 'empty')
