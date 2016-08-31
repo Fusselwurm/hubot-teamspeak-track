@@ -38,9 +38,9 @@ getRandomMessage = (type) ->
   messages[type][Math.floor(Math.random() * availableCount)]
 
 fs = require 'fs'
-fs.readFile '../messages/server-empty.txt', (err, data) ->
+fs.readFile __dirname + '/../messages/server-empty.txt', (err, data) ->
   if (data)
-    messages.empty = data.split('\n').filter((e) -> e.trim())
+    messages.empty = data.toString().split('\n').filter((e) -> e.trim())
 
 active_users = {}
 ignored_users = {}
