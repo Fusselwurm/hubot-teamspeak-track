@@ -43,14 +43,16 @@ getRandomMessage = (type) ->
 fs = require 'fs'
 fs.readFile __dirname + '/../messages/server-empty.txt', (err, data) ->
   if (data)
-    messages.empty = data.toString().split('\n').filter((e) -> e.trim())
+    extractedMessages = data.toString().split('\n').filter((e) -> e.trim())
+    if (extractedMessages.length)
+      messages.empty = extractedMessages
 
 active_users = {}
 ignored_users = {}
 groups = {}
 
 dehighlight = (nick) ->
-  if (nick.indexOf('_') == 0)
+  if (nick && nick.indexOf('_') == 0)
     return nick
   (nick || '').split('').join('\ufeff')
 
