@@ -102,6 +102,9 @@ module.exports = (robot) ->
 
 
     client.send "login", {client_login_name: user, client_login_password: password}, (err, resp) ->
+      if err
+        robot.logger.error ("error: " + (JSON.stringify(err)))
+        return
       if voice_port
         client.send "use", {port: voice_port}
       client.send "servernotifyregister", {event: "channel", id: 0}
@@ -111,6 +114,9 @@ module.exports = (robot) ->
           groups[g.sgid] = g
 
       client.send "clientlist", ["groups"], (err, resp) ->
+        if err
+          robot.logger.error ("error: " + JSON.stringify(err))
+          return
         for el in resp
           if el.client_type isnt 1
             active_users[el.clid] = {name: el.client_nickname}
@@ -142,7 +148,13 @@ module.exports = (robot) ->
       true
 
       robot.respond /teamspeak|get_users/i, (msg) ->
+        robot.logger.info 'listing ts users...'
         client.send "channellist", (err, channelArray) ->
+          if err
+            robot.logger.error err.message
+            send_message ("I've got an error: " + err.message)
+            return
+
           channelMap = {}
           for c in channelArray
             c.users = []
@@ -158,6 +170,10 @@ module.exports = (robot) ->
             users: []
 
           client.send "clientlist", ["groups"], (err, connectedClients) ->
+            if err
+              robot.logger.error err.message
+              send_message ("I've got an error: " + err.message)
+              return
 
             for el in connectedClients
               if el.client_type isnt 1
