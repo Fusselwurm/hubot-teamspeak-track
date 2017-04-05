@@ -147,7 +147,7 @@ module.exports = (robot) ->
       , 180000
       true
 
-      robot.respond /teamspeak|get_users/i, (msg) ->
+      robot.respond /ts|teamspeak|get_users/i, (msg) ->
         robot.logger.info 'listing ts users...'
         client.send "channellist", (err, channelArray) ->
           if err
