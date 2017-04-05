@@ -100,6 +100,48 @@ module.exports = (robot) ->
       else
         send_message dehighlight(nickName) + " has entered TeamSpeak"
 
+    getUsers = (res) ->
+      robot.logger.info 'listing ts users...'
+      client.send "channellist", (err, channelArray) ->
+        if err
+          robot.logger.error err.message
+          send_message ("I've got an error: " + err.message)
+          return
+
+        channelMap = {}
+        for c in channelArray
+          c.users = []
+          channelMap[c.cid] = c
+
+        channelMap[0] =
+          cid: 0,
+          pid: 0,
+          channel_order: 0,
+          channel_name: 'Unbekannter Channel',
+          total_clients: 0,
+          channel_needed_subscribe_power: 0,
+          users: []
+
+        client.send "clientlist", ["groups"], (err, connectedClients) ->
+          if err
+            robot.logger.error err.message
+            send_message ("I've got an error: " + err.message)
+            return
+
+          for el in connectedClients
+            if el.client_type isnt 1
+              channelMap[el.cid || 0].users.push getDecoratedNick(el)
+
+          msg = []
+          for cid of channelMap
+            c = channelMap[cid]
+            if c.users.length > 0
+              msg.push "*" + c.channel_name + "* (" + c.total_clients + "): " + c.users.sort(sortCaseInsensitive).map(dehighlight).join(", ")
+
+          if msg.length > 0
+            send_message "Im Teamspeak sind " + (connectedClients.length - 1) + " Benutzer :\n" + msg.join("\n")
+          else
+            send_message (getRandomMessage 'empty')
 
     client.send "login", {client_login_name: user, client_login_password: password}, (err, resp) ->
       if err
@@ -147,45 +189,5 @@ module.exports = (robot) ->
       , 180000
       true
 
-      robot.respond /ts|teamspeak|get_users/i, (msg) ->
-        robot.logger.info 'listing ts users...'
-        client.send "channellist", (err, channelArray) ->
-          if err
-            robot.logger.error err.message
-            send_message ("I've got an error: " + err.message)
-            return
-
-          channelMap = {}
-          for c in channelArray
-            c.users = []
-            channelMap[c.cid] = c
-
-          channelMap[0] =
-            cid: 0,
-            pid: 0,
-            channel_order: 0,
-            channel_name: 'Unbekannter Channel',
-            total_clients: 0,
-            channel_needed_subscribe_power: 0,
-            users: []
-
-          client.send "clientlist", ["groups"], (err, connectedClients) ->
-            if err
-              robot.logger.error err.message
-              send_message ("I've got an error: " + err.message)
-              return
-
-            for el in connectedClients
-              if el.client_type isnt 1
-                channelMap[el.cid || 0].users.push getDecoratedNick(el)
-
-            msg = []
-            for cid of channelMap
-              c = channelMap[cid]
-              if c.users.length > 0
-                msg.push "*" + c.channel_name + "* (" + c.total_clients + "): " + c.users.sort(sortCaseInsensitive).map(dehighlight).join(", ")
-
-            if msg.length > 0
-              send_message "Im Teamspeak sind " + (connectedClients.length - 1) + " Benutzer :\n" + msg.join("\n")
-            else
-              send_message (getRandomMessage 'empty')
+      robot.respond /ts|teamspeak|get_users/i, getUsers
+      robot.hear /\/ts/, getUsers
